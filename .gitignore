@@ -1,0 +1,29 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.iml
+.idea/
+.vscode/
+
+# مولّدة تلقائياً في GitHub Actions (flutter create)
+/android/
+/windows/
+/ios/
+/linux/
+/macos/
+/web/
+/test/
+
+# أسرار - ممنوع ترفعها أبداً
+env.json
+*.jks
+*.keystore
+key.properties
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+.env
