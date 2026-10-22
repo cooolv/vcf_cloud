@@ -1,0 +1,96 @@
+name: Build & Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    env:
+      KS_PASS: ${{ secrets.KS_PASS }}
+      KS_ALIAS: ${{ secrets.KS_ALIAS }}
+      KS_KEY_PASS: ${{ secrets.KS_KEY_PASS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Android platform
+        run: flutter create --platforms=android --org com.vcfcloud --project-name vcf_cloud .
+      - name: Restore keystore (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/app/release.jks
+          fi
+      - run: python3 scripts/patch_android.py
+      - run: flutter pub get
+      - name: Build APK
+        run: >
+          flutter build apk --release
+          --dart-define=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          --dart-define=FIREBASE_SENDER_ID=${{ secrets.FIREBASE_SENDER_ID }}
+          --dart-define=FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          --dart-define=FIREBASE_ANDROID_APP_ID=${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          --dart-define=FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}
+          --dart-define=FIREBASE_WEB_APP_ID=${{ secrets.FIREBASE_WEB_APP_ID }}
+      - name: Rename
+        run: cp build/app/outputs/flutter-apk/app-release.apk VCF-Cloud-Android.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: VCF-Cloud-Android.apk
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate Windows platform
+        run: flutter create --platforms=windows --org com.vcfcloud --project-name vcf_cloud .
+      - run: flutter pub get
+      - name: Build Windows
+        shell: bash
+        run: >
+          flutter build windows --release
+          --dart-define=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          --dart-define=FIREBASE_SENDER_ID=${{ secrets.FIREBASE_SENDER_ID }}
+          --dart-define=FIREBASE_ANDROID_API_KEY=${{ secrets.FIREBASE_ANDROID_API_KEY }}
+          --dart-define=FIREBASE_ANDROID_APP_ID=${{ secrets.FIREBASE_ANDROID_APP_ID }}
+          --dart-define=FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}
+          --dart-define=FIREBASE_WEB_APP_ID=${{ secrets.FIREBASE_WEB_APP_ID }}
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath VCF-Cloud-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: VCF-Cloud-Windows.zip
+
+  release:
+    needs: [android, windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
