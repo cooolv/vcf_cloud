@@ -44,7 +44,11 @@ for p in ("android/app/build.gradle.kts", "android/app/build.gradle"):
         break
 g = open(gradle, encoding="utf-8").read()
 g = g.replace("flutter.minSdkVersion", "23")
+g = re.sub(r"compileSdk(?:Version)?\s*=?\s*flutter\.compileSdkVersion", "compileSdk = 37", g)
 
+with open("android/gradle.properties", "a", encoding="utf-8") as gp:
+    gp.write("\nandroid.suppressUnsupportedCompileSdk=37\n")
+    
 if os.environ.get("KS_PASS") and gradle.endswith(".kts"):
     signing = '''
     signingConfigs {
