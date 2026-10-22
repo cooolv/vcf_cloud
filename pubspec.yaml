@@ -12,7 +12,7 @@ dependencies:
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.0
   cloud_firestore: ^5.5.0
-  file_picker: ^8.1.0
+  file_picker: ^10.3.0
   receive_sharing_intent: ^1.8.1
 
 dev_dependencies:
