@@ -36,6 +36,8 @@ jobs:
           fi
       - run: python3 scripts/patch_android.py
       - run: flutter pub get
+      - name: Generate app icons
+        run: dart run flutter_launcher_icons
       - name: Build APK
         run: >
           flutter build apk --release
